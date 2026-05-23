@@ -22,6 +22,21 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 
+  // Security and Rate Limit Status Banners
+  const [syncStatus, setSyncStatus] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
+  const [securityModalOpen, setSecurityModalOpen] = useState(false);
+  const [securityKeyInput, setSecurityKeyInput] = useState("");
+
+  // Auto clear sync notifications
+  useEffect(() => {
+    if (syncStatus) {
+      const timer = setTimeout(() => {
+        setSyncStatus(null);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [syncStatus]);
+
   // Fetch organization profile data
   const fetchOrg = async () => {
     setLoadingOrg(true);
@@ -99,17 +114,40 @@ export default function App() {
   };
 
   // Completely wipe server-side cache and reload newest
-  const handleFullSyncRefresh = async () => {
+  const handleFullSyncRefresh = async (enteredKey?: string) => {
     setRefreshing(true);
     try {
-      const syncResp = await fetch("/api/refresh", { method: "POST" });
-      if (syncResp.ok) {
+      const keyToUse = enteredKey || localStorage.getItem("oasis_sync_key") || "";
+      const syncResp = await fetch("/api/refresh", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-sync-key": keyToUse,
+        }
+      });
+
+      const resData = await syncResp.json();
+
+      if (syncResp.status === 401) {
+        setSecurityModalOpen(true);
+        setSyncStatus({ type: "error", message: "ACCESS REJECTED: Security lock configured. passphrase required." });
+      } else if (syncResp.status === 429) {
+        setSyncStatus({ type: "error", message: resData.message || "COOLDOWN: Rate limit exceeded." });
+      } else if (syncResp.ok) {
+        if (enteredKey) {
+          localStorage.setItem("oasis_sync_key", enteredKey);
+        }
+        setSecurityModalOpen(false);
+        setSyncStatus({ type: "success", message: "ARCHIVE STACK CLEARED & COPIED FRESH FROM GITHUB" });
         // Redownload state
         await fetchOrg();
         await fetchAlbums();
+      } else {
+        setSyncStatus({ type: "error", message: resData.message || "Failed to synchronize remote archive." });
       }
     } catch (err) {
       console.error("Error during server sync refresh:", err);
+      setSyncStatus({ type: "error", message: "CRITICAL: Connection dropped during archive syncing." });
     } finally {
       setRefreshing(false);
     }
@@ -153,9 +191,22 @@ export default function App() {
       <OrgHeader
         org={org}
         loading={loadingOrg}
-        onRefresh={handleFullSyncRefresh}
+        onRefresh={() => handleFullSyncRefresh()}
         refreshing={refreshing}
       />
+
+      {/* Dynamic Security/Status Informer Banner */}
+      {syncStatus && (
+        <div className={`w-full py-3 px-4 text-center text-[10px] font-mono uppercase tracking-[0.25em] border-b select-none transition-all duration-300 ${
+          syncStatus.type === "success" 
+            ? "bg-emerald-950/80 text-emerald-300 border-white/5" 
+            : syncStatus.type === "error"
+            ? "bg-rose-950/85 text-rose-300 border-white/5"
+            : "bg-zinc-900 text-zinc-300 border-white/5"
+        }`}>
+          [ {syncStatus.message} ]
+        </div>
+      )}
 
       {/* Primary body view layout */}
       <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-10 flex flex-col lg:flex-row gap-10 z-10 relative">
@@ -231,6 +282,51 @@ export default function App() {
           </span>
         </div>
       </footer>
+
+      {/* Custom Admin Security Override Modal */}
+      {securityModalOpen && (
+        <div className="fixed inset-0 bg-black/95 flex items-center justify-center p-4 z-50 select-none">
+          <div className="bg-[#111] border border-white/10 p-8 max-w-md w-full rounded-none shadow-2xl space-y-6">
+            <h4 className="text-white text-sm font-mono tracking-[0.2em] uppercase border-b border-white/15 pb-3">
+              [ SECURE KEY LOCK CHASSIS ]
+            </h4>
+            
+            <p className="text-zinc-400 text-xs leading-relaxed tracking-wide font-light">
+              This digital exhibition portal is protected under an administrator secure sync lock to prevent GitHub API threshold exhaustion. Please enter the curation passkey to authorize this operations.
+            </p>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handleFullSyncRefresh(securityKeyInput);
+            }} className="space-y-4">
+              <input
+                type="password"
+                placeholder="ENTER SECURE PASSCODE..."
+                value={securityKeyInput}
+                onChange={(e) => setSecurityKeyInput(e.target.value)}
+                className="w-full bg-[#161616] border border-white/5 focus:border-white/20 p-3 text-xs text-white uppercase font-mono tracking-wider focus:outline-hidden"
+                autoFocus
+              />
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSecurityModalOpen(false)}
+                  className="px-4 py-2 font-mono text-[9px] uppercase tracking-widest text-zinc-500 hover:text-white transition-colors"
+                >
+                  [ CANCEL ]
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-white text-black font-mono text-[9px] uppercase tracking-widest font-bold hover:bg-[#D1D1D1] transition-color text-center inline-block"
+                >
+                  AUTHORIZE SYNC
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Immersive lightbox view modal */}
       <Lightbox

@@ -316,8 +316,83 @@ app.get("/api/repos/:repo/photos", async (req, res) => {
   }
 });
 
+const FALLBACK_STORIES: { [key: string]: string } = {
+  "theOrigin_2026.5": `《川西溯源之途 / The Origin of Maoxian》
+
+此册记录了2026年5月初夏，穿行自川西茂县的群山深壑。镜头中，高耸交错的褶皱山脉与寂静的藏羌村寨在淡薄的晨雾里无声矗立。山峦的几何线条在强烈的顶光与薄暮下被重置，化作极简、冷峻的立体块面。
+
+这是一次对抗喧嚣的沉默跋涉，旨在镜头之下，触及这片古老山河中被时间遗忘的最本质的质感、力量与自然的光影共振。`,
+
+  "ceaser_12.24.2025": `《岁末微光沉思 / Late Winter Light》
+
+摄于二零二五年十二月平安夜。镜头凝结了寒冬街角里微茫的暖意、暮色中冷色调的城市剪影，以及枯木在藏青色天际线下分割出的纷繁线条。
+
+光线在此处变得非常温和、迟缓。这是一组注重孤独、城市漫游与内心安宁的影像捕捉，叙述着属于冬日傍晚特有的宁静与释怀。`,
+
+  "ceaser_12.26.2025": `《冬至过后的残温 / Cold Dawn Reflection》
+
+记录了冬至刚过的清晨，那抹极低、极寒的斜射日光。在清冷的玻璃或灰暗的石块表面，光以惊人的极简主义勾勒出纯粹的几何界面。
+
+色彩被压缩至近乎单色（Monochrome），在光影的重度对比下，空气的尘埃、金属质感与寒风的流动仿佛皆可感、可触。`,
+
+  "the-origin_12.20-12.21.2025": `《原点几何结构 / Geometries of Origin》
+
+关于光、地平线与人造几何建筑的艺术解构。镜头在荒芜旷野与利落钢筋线条间游走，以大块黑白色阶碰撞出宁静的力量。
+
+它探索了摄影作为纯粹构图的本质：无声的对称、大面积的留白，以及在不完美的现实中发掘出来的绝对完美的比例。`,
+
+  "ceaserzhao_2026_winter_vacation_2.1-2.16": `《春寒旅途散文 / Winter Vacation Wanderlust》
+
+这是一部写给二〇二六年初春尚寒假期的视觉散文。漫无目的地穿梭、徒步、停留，镜头掠过了寒晨白霜的铁轨站台、冰封干枯的水泊，以及薄暮微光下暖黄色的窗页。
+
+整组影像散发着安详、悠长的旅途漂泊感，是对光阴流转、世间温存的静谧对答。`,
+
+  "ceaser_highschool_march_2026": `《走廊与粉笔回响 / Nostalgia of School Light》
+
+二〇二六年三月，重返承载青涩记忆的校园走廊。斜射进空荡教室的春日午后阳光、布满微尘划痕的木桌椅，与静默无声的操场看台，都被温柔、怀旧的低饱和色调环绕。
+
+时间在此处似乎走得极缓慢，每一副画面都是一首关于逝去青葱岁月的无声赞美诗。`,
+
+  "ceaser_april_20026": `《四月街道的温热呼吸 / April Pulse》
+
+四月的街道润湿在轻柔春雨中，空气里浮动着泥土与初绽花叶的温热气息。
+
+镜头记录了水洼里五彩斑斓的反光倒影、行色匆匆的模糊伞影以及斑驳砖墙下的微弱花色。在一动一静之间，城市与自然在春光里的秘密私语被无声固化。`,
+
+  "ceaser_april_2026": `《四月的极简街道 / April Geometry》
+
+四月的街道润湿在轻柔春雨中，空气里浮动着泥土与初绽花叶的温热气息。
+
+镜头记录了水洼里五彩斑斓的反光倒影、行色匆匆的模糊伞影以及斑驳砖墙下的微弱花色。在一动一静之间，城市与自然在春光里的秘密私语被无声固化。`
+};
+
+let lastRefreshTime = 0;
+const REFRESH_COOLDOWN_MS = 15000; // 15 seconds limit
+
 // 4. Invalidate Cache to refresh live photos on demand
 app.post("/api/refresh", (req, res) => {
+  const adminKey = process.env.ADMIN_SYNC_KEY;
+  const userKey = req.headers["x-sync-key"] || req.body?.syncKey;
+
+  if (adminKey && userKey !== adminKey) {
+    return res.status(401).json({
+      success: false,
+      error: "UNAUTHORIZED",
+      message: "Sync aborted: Invalid admin sync key."
+    });
+  }
+
+  const now = Date.now();
+  if (now - lastRefreshTime < REFRESH_COOLDOWN_MS) {
+    const waitSec = Math.ceil((REFRESH_COOLDOWN_MS - (now - lastRefreshTime)) / 1000);
+    return res.status(429).json({
+      success: false,
+      error: "COOLDOWN",
+      message: `System cooldown in effect. Please wait ${waitSec}s.`
+    });
+  }
+
+  lastRefreshTime = now;
   apiCache.org = undefined;
   apiCache.repos = undefined;
   apiCache.repoPhotos = {};
@@ -334,8 +409,15 @@ app.post("/api/repos/:repo/story", async (req, res) => {
     return res.json({ story: apiCache.repoStories[repo] });
   }
 
+  const fallback = FALLBACK_STORIES[repo] || `《影像虚静漫游 / Atmospheric Specimen》
+
+光线掠过镜头，把斑驳而交错的剪影无声沉淀。在这座黑白与色调交汇的艺术画廊里，每一张画面都在低诉着时间与地点的秘密。
+
+这是一次跨越物理空间的漫步，旨在最纯粹的灰度与色谱里，寻得灵魂瞬间共振的完全清空与视觉纯粹。`;
+
   if (!ai) {
-    return res.status(503).json({ error: "Symphony Curator Engine not initialized. Please verify configuration keys are set." });
+    apiCache.repoStories[repo] = fallback;
+    return res.json({ story: fallback });
   }
 
   try {
@@ -355,12 +437,13 @@ Structure:
 - Keep it highly clean and elegant. Do not output raw JSON, start directly with the title.`,
     });
 
-    const storyText = response.text || "暂无AI故事生成。";
+    const storyText = response.text || fallback;
     apiCache.repoStories[repo] = storyText;
     res.json({ story: storyText });
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    res.status(500).json({ error: error.message || "Failed to generate narrative." });
+    console.warn("Gemini API Error, utilizing poetry fallback dictionary:", error);
+    apiCache.repoStories[repo] = fallback;
+    res.json({ story: fallback });
   }
 });
 
@@ -368,8 +451,25 @@ Structure:
 app.post("/api/chat", async (req, res) => {
   const { messages, currentRepo } = req.body;
 
+  const fallbackReply = (() => {
+    const lastUserMessage = messages && messages.length > 0 ? messages[messages.length - 1].content : "";
+    const msgLower = lastUserMessage.toLowerCase();
+    
+    if (msgLower.includes("你好") || msgLower.includes("hello") || msgLower.includes("greetings")) {
+      return "你好，我是 Oasis 画廊策展伴侣。虽然当前云端智能服务略显繁忙，但我依然伴你身旁。每一幅参展的摄影标本都记录着特定的晨光或严寒，你可以随时选中左侧的展览名，查看我事先为你写好的文学漫笔。";
+    } else if (msgLower.includes("相机") || msgLower.includes("参数") || msgLower.includes("设备") || msgLower.includes("camera") || msgLower.includes("lens")) {
+      return "这是一系列高像素和宽动态范围拍摄的数码原图，经过低高光、高对比的胶片模拟微调。色调偏冷且强调阴暗部的细节，使用了大光圈人文定焦头与高宽容度的风光镜头，以完美承载自然的高反差。";
+    } else if (msgLower.includes("川西") || msgLower.includes("山") || msgLower.includes("theorigin") || msgLower.includes("origin")) {
+      return "《茂县溯源之途》展现了群山褶皱在顶光下的剧烈反差。如果你细看，每一处嶙峋的岩壁和笼罩羌寨的轻薄雾气，都传达着大自然的伟岸与静穆。";
+    } else if (msgLower.includes("冬") || msgLower.includes("雪") || msgLower.includes("winter") || msgLower.includes("ceaser")) {
+      return "这里的冬日作品（如 2025 年末的漫步）聚焦于午后暖阳与工业冷钢建筑的对比。斑驳的光影被拉得极长，透出一股温暖又静止的岁末宿命感。";
+    } else {
+      return "策展伴侣收到了你的心声。在此时此刻的画廊空间里，每一帧光影都不需要定义。它们仅仅是空气的呼吸和光斑在特定维度的重叠。虽然云端同步暂时繁复，但不妨让我们的眼眸直接与这些照片进行最纯净的静默凝视。";
+    }
+  })();
+
   if (!ai) {
-    return res.status(503).json({ error: "Curator Engine not initialized." });
+    return res.json({ content: fallbackReply });
   }
 
   try {
@@ -415,10 +515,10 @@ Goal:
       },
     });
 
-    res.json({ content: response.text || "不好意思，我暂时无法进行思考。请稍后重试。" });
+    res.json({ content: response.text || fallbackReply });
   } catch (error: any) {
-    console.error("Chat companion error:", error);
-    res.status(500).json({ error: error.message || "Something went wrong during narration conversation." });
+    console.warn("Chat API error, utilizing poetic fallback answers:", error);
+    res.json({ content: fallbackReply });
   }
 });
 
