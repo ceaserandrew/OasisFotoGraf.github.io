@@ -1,0 +1,6 @@
+{
+  "name": "OasisFotoGraf Photo Portal",
+  "description": "An automated and elegant presentation portal that displays all photo collections of the OasisFotoGraf organization on GitHub.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
