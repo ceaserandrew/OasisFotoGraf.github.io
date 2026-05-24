@@ -183,7 +183,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#eaeaea] font-sans flex flex-col selection:bg-white selection:text-black">
       
-      {/* Editorial aesthetic subtle alignment gridlines */}
+      {/* Editorial aesthetic subtle alignment gridlines - hidden on mobile */}
       <div className="fixed inset-y-0 left-12 w-[1px] bg-white/[0.02] pointer-events-none z-0 hidden lg:block" />
       <div className="fixed inset-y-0 right-12 w-[1px] bg-white/[0.02] pointer-events-none z-0 hidden lg:block" />
 
@@ -209,13 +209,13 @@ export default function App() {
       )}
 
       {/* Primary body view layout */}
-      <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-10 flex flex-col lg:flex-row gap-10 z-10 relative">
+      <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 sm:py-10 flex flex-col lg:flex-row gap-8 lg:gap-10 z-10 relative">
         
         {/* Left column - Album grid lists and main photo photoGrid viewport */}
-        <main className="flex-1 flex flex-col gap-10 min-w-0">
+        <main className="flex-1 flex flex-col gap-8 lg:gap-10 min-w-0">
           
           {/* Albums catalog cards block */}
-          <section className="flex flex-col gap-5">
+          <section className="flex flex-col gap-4 sm:gap-5">
             <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-white/10 pb-3">
               <div className="flex items-center gap-2.5">
                 <Camera className="w-4 h-4 text-zinc-400" />
@@ -229,13 +229,13 @@ export default function App() {
             </div>
 
             {loadingAlbums ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
                 {[1, 2, 3].map((n) => (
                   <div key={n} className="h-44 rounded-none bg-[#121111] border border-white/5 animate-pulse" />
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
                 {albums.map((album) => (
                   <AlbumCard
                     key={album.id}
@@ -263,7 +263,7 @@ export default function App() {
         </main>
 
         {/* Right column - AI Companion Panel for curation narrative */}
-        <aside className="w-full lg:w-80 xl:w-96 shrink-0 h-auto lg:h-[calc(100vh-14rem)] sticky top-28 z-20">
+        <aside className="w-full lg:w-80 xl:w-96 shrink-0 h-auto lg:h-[calc(100vh-14rem)] lg:sticky top-20 lg:top-28 z-20">
           <AIPanel
             album={selectedAlbum}
             photosLength={photos.length}

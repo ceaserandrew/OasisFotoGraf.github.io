@@ -21,7 +21,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({
   return (
     <motion.div
       onClick={onSelect}
-      className={`relative rounded-none overflow-hidden bg-[#121212] border p-6 cursor-pointer select-none transition-all duration-300 ${
+      className={`relative rounded-none overflow-hidden bg-[#121212] border p-4 sm:p-5 md:p-6 cursor-pointer select-none transition-all duration-300 min-h-[140px] ${
         isSelected
           ? "border-white/80 bg-gradient-to-b from-[#161616] to-[#121212] shadow-2xl"
           : "border-white/5 hover:border-white/20 hover:bg-[#161616] shadow-md"
@@ -35,7 +35,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({
       )}
 
       {/* Date metadata display */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-3 sm:mb-4">
         <div className="flex items-center gap-1.5">
           <Calendar className="w-3 h-3 text-zinc-500" />
           <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-zinc-500 font-semibold">
@@ -51,17 +51,17 @@ const AlbumCard: React.FC<AlbumCardProps> = ({
       </div>
 
       {/* Album Title with beautiful Editorial serif style */}
-      <h3 className="text-lg font-serif italic text-zinc-100 tracking-tight mb-2 group-hover:text-white">
+      <h3 className="text-lg font-serif italic text-zinc-100 tracking-tight mb-2">
         {album.title}
       </h3>
 
       {/* Descriptive Paragraph */}
-      <p className="text-xs text-zinc-400 font-sans leading-relaxed line-clamp-2 h-8 mb-6 tracking-wide font-light">
+      <p className="text-xs text-zinc-400 font-sans leading-relaxed line-clamp-2 h-auto mb-4 sm:mb-6 tracking-wide font-light">
         {album.description || "An automated visual chronicle documenting the intersection of light, environment, and visual geometry."}
       </p>
 
       {/* Fine-crafted border separator */}
-      <div className="flex items-center justify-between pt-4 border-t border-white/5 mt-auto text-[10px] font-mono uppercase tracking-wider">
+      <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-white/5 mt-auto text-[10px] font-mono uppercase tracking-wider">
         <div className="flex items-center gap-2">
           {loadingPhotos && isSelected ? (
             <div className="flex items-center gap-1.5 text-white/80 animate-pulse">
@@ -87,7 +87,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({
           target="_blank"
           rel="noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-1 text-zinc-500 hover:text-white transition-colors"
+          className="flex items-center gap-1 text-zinc-500 hover:text-white transition-colors min-h-[44px] min-w-[44px] justify-end items-center"
           title="Open source on GitHub"
         >
           <span>SOURCE</span>
